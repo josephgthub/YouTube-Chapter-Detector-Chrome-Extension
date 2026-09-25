@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Chapter Detector Side Bar",
+  "version": "1.0",
+  "description": "Detects and displays YouTube video chapters with a dark mode popup.",
+  "permissions": [
+    "webNavigation",
+    "activeTab",
+    "storage",
+    "scripting",
+    "sidePanel",
+    "tabs",
+    "clipboardRead"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "48": "icon48.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+V"
+      },
+      "description": "Opens the YouTube Chapter Detector popup"
+    }
+  }
+}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Chapter Detector</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <script src="yt_chat_integration.js"></script></head>
+<body>
+  <div class="container">
+    <div class="notification" id="notification">Video data deleted</div>
+    <div class="header">
+      <div class="search-area" id="search-area" style="display: none;">
+        <input type="text" id="search-input">
+        <!-- <input type="text" id="search-input" placeholder="Search chapters"> -->
+        <span id="search-counter"></span>
+        <button class="clear-search-button" id="clear-search-button" title="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="header-top">
+        <div class="video-info-header">
+          <img src="" alt="thumbnail" id="video-thumbnail" style="width: 60px; height: 40px; margin-right: 10px; border-radius: 3px;">
+          <div class="video-info-text">
+            <h1 id="video-title" title="" style="font-size: 14px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h1>
+            <div class="video-meta">
+              <span id="video-meta-text" title=""></span>
+            </div>
+          </div>
+        </div>
+        <div class="header-buttons">
+          <button class="search-button" id="search-button" title="Search Chapters">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          <button class="delete-video-button" id="delete-video-button" title="Delete This Video Data" tabindex="-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+              <path d="M3 6h18" />
+              <path d="M19 6v14H5V6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+            </svg>
+          </button>
+          <button class="saved-storage-button" id="saved-storage-button" title="History">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(6, 0)">
+                <g transform="rotate(-20, 50, 50)">
+                  <path d="M10 63a40 40 0 1 0 0.72 -28.28" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <polyline points="11,10 8.9,35 30,30" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </g>
+                <circle cx="46.2" cy="49.2" r="2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></circle>
+                <polyline points="45,25 45.5,50 65,65" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              </g>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab" data-tab="normal" title="Normal">
+          <span class="tab-label">Normal</span>
+        </div>
+        <div class="tab" data-tab="auto" title="Auto-generated">
+          <span class="tab-label">Auto-generated</span>
+        </div>
+        <div class="tab" data-tab="keymoments" title="Key Moments">
+          <span class="tab-label">Key Moments</span>
+        </div>
+        <div class="tab" data-tab="description" title="Description">
+          <span class="tab-label">Description</span>
+        </div>
+        <!-- <div class="tab active" data-tab="custom" title="Custom"> -->
+        <div class="tab" data-tab="custom" title="Custom">
+          <span class="tab-label">Custom</span>
+        </div>
+      </div>
+    </div>
+    <button class="sync-button" id="sync-button">Sync to video time</button>
+    <div class="content" id="normal-content"></div>
+    <div class="content" id="auto-content" style="display: none;"></div>
+    <div class="content" id="keymoments-content" style="display: none;"></div>
+    <div class="content" id="description-content" style="display: none;"></div>
+    <div class="content" id="custom-content" style="display: none;">
+      <textarea class="custom-input" id="custom-input" placeholder="Add Custom Chapters Here:
+0:00 Intro
+(1:00) Chapter 1
+2:00 - Chapter 2
+3:00 : Chapter 3
+4:00 Chapter 4
+5:00 :- Chapter 5"></textarea>
+    </div>
+    <div class="content" id="saved-content" style="display: none;">
+      <div class="saved-header">
+        <button class="back-button" id="back-button">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M14 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <h2>Saved Videos</h2>
+        <button class="delete-all-button" id="delete-all-button" title="Delete All" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M2 6h20M19 6l-1 14H6L5 6" />
+            <path d="M9 11v6" />
+            <path d="M12 11v6" />
+            <path d="M15 11v6" />
+            <path d="M21 21l-18 -18" stroke-width="1.2" stroke-linecap="square"/>
+          </svg>
+        </button>
+      </div>
+      <div id="saved-videos-list"></div>
+      <div class="delete-all-popup" id="delete-all-popup" style="display: none;">
+        <p>Are you sure you want to delete all saved videos?</p>
+        <div class="popup-buttons">
+          <button id="confirm-delete-all">Delete All</button>
+          <button id="cancel-delete-all">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div class="delete-video-popup" id="delete-video-popup"  style="display: none;">
+      <p>Are you sure you want to delete this video's data?</p>
+      <div class="popup-buttons">
+        <button id="confirm-delete-video">OK</button>
+        <button id="cancel-delete-video">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <script src="utils.js"></script>
+  <script src="popup.js"></script>
+  <script src="searchcontent.js"></script>
+  <script src="historypage.js"></script>
+  <script src="chaptersrender.js"></script>
+</body>
+</html>

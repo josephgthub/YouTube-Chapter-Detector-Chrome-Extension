@@ -1,0 +1,8 @@
+sync button glitch
+speed shortcut
+add loop video feature
+add loop chapter feature
+export data feature
+use youtube database images for normal and auto-generated chapters
+(shift + '?') popup
+Download Feature
