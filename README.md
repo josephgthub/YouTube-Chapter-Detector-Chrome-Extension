@@ -1,9 +1,12 @@
+
+
+
 # YouTube Chapter Detector
 
 A Chrome extension that detects and displays YouTube video chapters in a side panel. Navigate chapters easily, search through them, and save videos for later.
 
 ## Demo Video
-[Watch the demo video here](Demo%20Video.mp4)
+https://github.com/user-attachments/assets/408dff45-a583-44e9-bb6e-2ea02dba6f78
 
 ## How to Install
 
