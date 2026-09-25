@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/408dff45-a583-44e9-bb6e-2ea02dba6f78
 
 ## How to Install
 
-1. Download the extension files from the [releases page](https://github.com/yourusername/YouTube-Chapter-Detector-Chrome-Extension/releases)
+1. Download the extension files
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable **Developer mode** (toggle in the top right corner)
 4. Click **Load unpacked**
