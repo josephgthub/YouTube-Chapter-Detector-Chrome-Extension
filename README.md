@@ -3,7 +3,7 @@
 A Chrome extension that detects and displays YouTube video chapters in a side panel. Navigate chapters easily, search through them, and save videos for later.
 
 ## Demo Video
-[Watch the demo video here](Demo%20Video.mkv)
+[Watch the demo video here](Demo%20Video.mp4)
 
 ## How to Install
 
