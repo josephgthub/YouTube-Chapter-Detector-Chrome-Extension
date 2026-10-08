@@ -1443,133 +1443,238 @@ chrome.windows.getCurrent({ populate: true }, (currentWindow) => {
                   const storedDuration = storedData.duration ? parseInt(storedData.duration) : window.videoDuration;
 
                   // Check for ads if not live and duration exists
-                  if (!isLive && storedDuration) {
-                    await chrome.scripting.executeScript(
-                      {
-                        target: { tabId: activeTab.id },
-                        func: async (storedDuration) => {
-                          const video = document.querySelector('video');
-                          let skipped = false;
-                          let skipMethod = null;
+                  // ===== START NEW =====
+                  // ===== ad detection using .ad-showing (works on live videos too) =====
+                  await chrome.scripting.executeScript(
+                    {
+                      target: { tabId: activeTab.id },
+                      func: async () => {
+                        const video = document.querySelector('video');
+                        let skipped = false;
 
-                          if (video) {
-                            function getRandomBetween(start, end) {
-                              if (start > end) [start, end] = [end, start]; // Swap if start > end
-                              return Math.floor(Math.random() * (end - start + 1)) + start;
-                            }
-
-                            function sendLogMessage(...args) {
-                              const message = args.map(arg => {
-                                try {
-                                  return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-                                } catch (e) {
-                                  return '[Unserializable Object]';
-                                }
-                              }).join(' ');
-
-                              chrome.runtime.sendMessage({
-                                type: 'log',
-                                message: message
-                              });
-                            }
-
-                            const playerDuration = Math.round(video.duration);
-                            const durationDiff = Math.abs(playerDuration - storedDuration);
-                            // sendLogMessage(durationDiff > 1 && playerDuration<600,)
-                            if (durationDiff > 15) {
-                            // if (durationDiff > 1 && playerDuration<600) {
-                              await new Promise(resolve => chrome.storage.local.get(['lastAdSkippedTime'], (result) => {
-                                const now = Date.now();
-                                const lastSkippedStr = result.lastAdSkippedTime;
-                                const lastSkipped = lastSkippedStr ? new Date(lastSkippedStr).getTime() : 0;
-                                const timeSinceLastSkip = now - lastSkipped;
-                                let mintime=getRandomBetween(500, 1500)
-                                if (timeSinceLastSkip >= 10000) {
-                                  // const futureDate = new Date(Date.now() + 3000); // Current time + 5 seconds
-                                  // const formattedTime = futureDate.toLocaleString('en-US', {
-                                  //   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                  // });
-                                  const formattedTime = new Date().toLocaleString('en-US', {
-                                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                  });
-                                  chrome.storage.local.set({
-                                    lastAdSkippedTime: formattedTime
-                                  });
-                                  chrome.storage.local.get(['lastprinttime'], (result) => {
-                                    const lastprinttimestr = result.lastprinttime;
-                                    const lasttime = lastprinttimestr ? new Date(lastprinttimestr).getTime() : 0;
-                                    const timeSinceLastprint = now - lasttime;
-                                    if (timeSinceLastprint >= 5000) {
-                                        sendLogMessage(`New Ad, Waiting for few ms ${formattedTime}`) 
-                                    }
-                                  });
-                                  chrome.storage.local.set({
-                                    lastprinttime: formattedTime
-                                  });
-                                  timeSinceLastSkip=now - formattedTime;
-                                  skipped = false;
-                                  skipMethod = 'duration-mismatch';
-                                }
-
-                                const skip = () => {
-                                  const formattedTime = new Date().toLocaleString('en-US', {
-                                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                  });
-                                  chrome.storage.local.set({
-                                    lastAdSkippedTime: formattedTime
-                                  });
-                                  video.currentTime = video.duration;
-                                  skipped = true;
-                                  skipMethod = 'duration-mismatch';
-                                };
-                                
-                                
-                                if (timeSinceLastSkip >= mintime) {
-                                  const formattedTime = new Date().toLocaleString('en-US', {
-                                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                  });
-                                  sendLogMessage(`stored duration = ${storedDuration}, video player duration = ${playerDuration} so skipping the ad to the end\nWaited for ${mintime}ms ${formattedTime}`)
-                                  skip();
-                                }
-                                else{
-                                  skipped = false;
-                                  skipMethod = 'duration-mismatch';
-                                }
-                                resolve();
-                              }));
-                            }
-                          } else {
-                            console.log("no video found");
+                        if (video) {
+                          function getRandomBetween(start, end) {
+                            if (start > end) [start, end] = [end, start]; // Swap if start > end
+                            return Math.floor(Math.random() * (end - start + 1)) + start;
                           }
-                          return { skipped, skipMethod };
-                        },
-                        args: [storedDuration],
+
+                          function sendLogMessage(...args) {
+                            const message = args.map(arg => {
+                              try {
+                                return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+                              } catch (e) {
+                                return '[Unserializable Object]';
+                              }
+                            }).join(' ');
+
+                            chrome.runtime.sendMessage({
+                              type: 'log',
+                              message: message
+                            });
+                          }
+
+                          const isAd = document.querySelector('.ad-showing') !== null;
+                          if (isAd && Number.isFinite(video.duration)) {
+                            await new Promise(resolve => chrome.storage.local.get(['lastAdSkippedTime'], (result) => {
+                              const now = Date.now();
+                              const lastSkippedStr = result.lastAdSkippedTime;
+                              const lastSkipped = lastSkippedStr ? new Date(lastSkippedStr).getTime() : 0;
+                              let timeSinceLastSkip = now - lastSkipped;
+                              let mintime = getRandomBetween(500, 1500);
+
+                              // New ad (10s+ since last one): start the wait timer, do not skip on this tick
+                              if (timeSinceLastSkip >= 10000) {
+                                const formattedTime = new Date().toLocaleString('en-US', {
+                                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                });
+                                chrome.storage.local.set({
+                                  lastAdSkippedTime: formattedTime
+                                });
+                                chrome.storage.local.get(['lastprinttime'], (result) => {
+                                  const lastprinttimestr = result.lastprinttime;
+                                  const lasttime = lastprinttimestr ? new Date(lastprinttimestr).getTime() : 0;
+                                  const timeSinceLastprint = now - lasttime;
+                                  if (timeSinceLastprint >= 5000) {
+                                    sendLogMessage(`New Ad, Waiting for few ms ${formattedTime}`);
+                                  }
+                                });
+                                chrome.storage.local.set({
+                                  lastprinttime: formattedTime
+                                });
+                                timeSinceLastSkip = 0; // restart the wait
+                              }
+
+                              // Waited long enough: skip to the end of the ad
+                              if (timeSinceLastSkip >= mintime) {
+                                const formattedTime = new Date().toLocaleString('en-US', {
+                                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                });
+                                chrome.storage.local.set({
+                                  lastAdSkippedTime: formattedTime
+                                });
+                                sendLogMessage(`Ad detected (.ad-showing), skipping the ad to the end\nWaited for ${mintime}ms ${formattedTime}`);
+                                video.currentTime = video.duration;
+                                skipped = true;
+                              }
+                              resolve();
+                            }));
+                          }
+                        }
+                        return { skipped };
                       },
-                      (results) => {
-                        if (chrome.runtime.lastError) {
-                          console.log('Script execution failed:', chrome.runtime.lastError.message);
-                          return;
-                        }
-                        const result = results && results[0]?.result;
-                        if (result) {
-                          const { playerDuration, skipped, skipMethod } = result;
-                          if (playerDuration !== null && skipped && skipMethod.includes('duration-mismatch')) {
-                            const notification = document.getElementById('notification');
-                            if (window.notificationTimeout) {
-                              clearTimeout(window.notificationTimeout);
-                            }
-                            notification.textContent = 'Ad skipped';
-                            notification.classList.add('show');
-                            window.notificationTimeout = setTimeout(() => {
-                              notification.classList.remove('show');
-                              notification.textContent = '';
-                              window.notificationTimeout = null;
-                            }, 2000);
-                          }
-                        }
+                    },
+                    (results) => {
+                      if (chrome.runtime.lastError) {
+                        console.log('Script execution failed:', chrome.runtime.lastError.message);
+                        return;
                       }
-                    );
-                  }
+                      const result = results && results[0]?.result;
+                      if (result && result.skipped) {
+                        const notification = document.getElementById('notification');
+                        if (window.notificationTimeout) {
+                          clearTimeout(window.notificationTimeout);
+                        }
+                        notification.textContent = 'Ad skipped';
+                        notification.classList.add('show');
+                        window.notificationTimeout = setTimeout(() => {
+                          notification.classList.remove('show');
+                          notification.textContent = '';
+                          window.notificationTimeout = null;
+                        }, 2000);
+                      }
+                    }
+                  );
+                  // ===== END NEW =====
+
+                  // ===== OLD (disabled): duration-comparison logic. To revert: delete the NEW block above and uncomment this one =====
+//                   if (!isLive && storedDuration) {
+//                     await chrome.scripting.executeScript(
+//                       {
+//                         target: { tabId: activeTab.id },
+//                         func: async (storedDuration) => {
+//                           const video = document.querySelector('video');
+//                           let skipped = false;
+//                           let skipMethod = null;
+
+//                           if (video) {
+//                             function getRandomBetween(start, end) {
+//                               if (start > end) [start, end] = [end, start]; // Swap if start > end
+//                               return Math.floor(Math.random() * (end - start + 1)) + start;
+//                             }
+
+//                             function sendLogMessage(...args) {
+//                               const message = args.map(arg => {
+//                                 try {
+//                                   return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+//                                 } catch (e) {
+//                                   return '[Unserializable Object]';
+//                                 }
+//                               }).join(' ');
+
+//                               chrome.runtime.sendMessage({
+//                                 type: 'log',
+//                                 message: message
+//                               });
+//                             }
+
+//                             const playerDuration = Math.round(video.duration);
+//                             const durationDiff = Math.abs(playerDuration - storedDuration);
+//                             // sendLogMessage(durationDiff > 1 && playerDuration<600,)
+//                             if (durationDiff > 15) {
+//                             // if (durationDiff > 1 && playerDuration<600) {
+//                               await new Promise(resolve => chrome.storage.local.get(['lastAdSkippedTime'], (result) => {
+//                                 const now = Date.now();
+//                                 const lastSkippedStr = result.lastAdSkippedTime;
+//                                 const lastSkipped = lastSkippedStr ? new Date(lastSkippedStr).getTime() : 0;
+//                                 const timeSinceLastSkip = now - lastSkipped;
+//                                 let mintime=getRandomBetween(500, 1500)
+//                                 if (timeSinceLastSkip >= 10000) {
+//                                   // const futureDate = new Date(Date.now() + 3000); // Current time + 5 seconds
+//                                   // const formattedTime = futureDate.toLocaleString('en-US', {
+//                                   //   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+//                                   // });
+//                                   const formattedTime = new Date().toLocaleString('en-US', {
+//                                     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+//                                   });
+//                                   chrome.storage.local.set({
+//                                     lastAdSkippedTime: formattedTime
+//                                   });
+//                                   chrome.storage.local.get(['lastprinttime'], (result) => {
+//                                     const lastprinttimestr = result.lastprinttime;
+//                                     const lasttime = lastprinttimestr ? new Date(lastprinttimestr).getTime() : 0;
+//                                     const timeSinceLastprint = now - lasttime;
+//                                     if (timeSinceLastprint >= 5000) {
+//                                         sendLogMessage(`New Ad, Waiting for few ms ${formattedTime}`) 
+//                                     }
+//                                   });
+//                                   chrome.storage.local.set({
+//                                     lastprinttime: formattedTime
+//                                   });
+//                                   timeSinceLastSkip=now - formattedTime;
+//                                   skipped = false;
+//                                   skipMethod = 'duration-mismatch';
+//                                 }
+
+//                                 const skip = () => {
+//                                   const formattedTime = new Date().toLocaleString('en-US', {
+//                                     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+//                                   });
+//                                   chrome.storage.local.set({
+//                                     lastAdSkippedTime: formattedTime
+//                                   });
+//                                   video.currentTime = video.duration;
+//                                   skipped = true;
+//                                   skipMethod = 'duration-mismatch';
+//                                 };
+                                
+                                
+//                                 if (timeSinceLastSkip >= mintime) {
+//                                   const formattedTime = new Date().toLocaleString('en-US', {
+//                                     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+//                                   });
+//                                   sendLogMessage(`stored duration = ${storedDuration}, video player duration = ${playerDuration} so skipping the ad to the end\nWaited for ${mintime}ms ${formattedTime}`)
+//                                   skip();
+//                                 }
+//                                 else{
+//                                   skipped = false;
+//                                   skipMethod = 'duration-mismatch';
+//                                 }
+//                                 resolve();
+//                               }));
+//                             }
+//                           } else {
+//                             console.log("no video found");
+//                           }
+//                           return { skipped, skipMethod };
+//                         },
+//                         args: [storedDuration],
+//                       },
+//                       (results) => {
+//                         if (chrome.runtime.lastError) {
+//                           console.log('Script execution failed:', chrome.runtime.lastError.message);
+//                           return;
+//                         }
+//                         const result = results && results[0]?.result;
+//                         if (result) {
+//                           const { playerDuration, skipped, skipMethod } = result;
+//                           if (playerDuration !== null && skipped && skipMethod.includes('duration-mismatch')) {
+//                             const notification = document.getElementById('notification');
+//                             if (window.notificationTimeout) {
+//                               clearTimeout(window.notificationTimeout);
+//                             }
+//                             notification.textContent = 'Ad skipped';
+//                             notification.classList.add('show');
+//                             window.notificationTimeout = setTimeout(() => {
+//                               notification.classList.remove('show');
+//                               notification.textContent = '';
+//                               window.notificationTimeout = null;
+//                             }, 2000);
+//                           }
+//                         }
+//                       }
+//                     );
+//                   }
+                  // ===== END OLD =====
 
                   // Existing logic to get current time and highlight chapter
                   chrome.scripting.executeScript(
